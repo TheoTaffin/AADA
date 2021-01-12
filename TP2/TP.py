@@ -1,9 +1,10 @@
-import numpy as np
 import datetime
 import pandas as pd
 
 import efficient_apriori
 import os
+
+import spmf
 
 lines = []
 
@@ -49,7 +50,11 @@ results_r1_c1_inverted_conf_equal = {}
 for rule_1 in rules_r1_c1:
     tmp = rule_1
     for rule_2 in rules_r1_c1:
-        if tmp.lhs == rule_2.rhs and tmp.rhs == rule_2.lhs and tmp.confidence == rule_2.confidence:
+        """
+        Successfully found results if we round to maximum 2 digits, otherwise no results are yielded
+        """
+        if tmp.lhs == rule_2.rhs and tmp.rhs == rule_2.lhs and \
+                round(tmp.confidence, 2) == round(rule_2.confidence, 2):
             if not list(filter(lambda r: r.lhs == tmp.rhs and r.rhs == tmp.lhs,
                         results_r1_c1_inverted_conf_equal.keys())):
                 results_r1_c1_inverted_conf_equal[tmp] = tmp.confidence
@@ -94,3 +99,10 @@ print(f"for a confidence of 0.5 and a minimum support of 0.1, we have {item_sets
 """
 mdr alz c'est bon
 """
+
+# Question 8
+output_path = os.path.join(local_root, 'TP2/data/output.txt')
+spmf_build = spmf.Spmf("AprioriClose", input_filename=data_path,
+                 spmf_bin_location_dir='C:/Users/Theo/PycharmProjects/venv/Lib/site-packages/spmf')
+
+spmf_build.run()
