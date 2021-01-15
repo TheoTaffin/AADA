@@ -86,6 +86,7 @@ def features_extraction(df, capteur_lst):
                     capteur_features[f"std_{capteur}"] = float(vector.std())
 
                 actions_features[(subject, experience, action)] = capteur_features
+                capteur_features = {}
 
     feature_df = pd.DataFrame.from_dict(actions_features).dropna(axis=1)
     return feature_df
