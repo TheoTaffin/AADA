@@ -41,17 +41,17 @@ def tracer_signal(df, capteur, action, sujet, experience):
     signal_x = df.loc[(df["subject"] == sujet) &
                       (df["experience"] == experience) &
                       (df["action"] == action),
-                       capteur_list[capteur]+'_x'].values
+                      f"{capteur_list[capteur]}_x"].values
 
     signal_y = df.loc[(df["subject"] == sujet) &
                       (df["experience"] == experience) &
                       (df["action"] == action),
-                      capteur_list[capteur]+'_y'].values
+                      f"{capteur_list[capteur]}_y"].values
 
     signal_z = df.loc[(df["subject"] == sujet) &
                       (df["experience"] == experience) &
                       (df["action"] == action),
-                      capteur_list[capteur]+'_z'].values
+                      f"{capteur_list[capteur]}_z"].values
 
     nb_point = len(signal_x)
     time_axis = [x * 0.02 for x in range(0, nb_point)]
@@ -96,4 +96,3 @@ data = load_data(data_path)
 tracer_signal(data, 1, 1, 1, 3)
 tracer_signal(data, 2, 1, 1, 3)
 features = features_extraction(data, data.columns[0:6])
-
