@@ -99,11 +99,13 @@ print(f"for a confidence of 0.5 and a minimum support of 0.1, we have {item_sets
 """
 mdr alz c'est bon
 """
-
 # Question 8
 # You need spmf.jar in your working directory
 output_path = os.path.join(local_root, 'TP2/data/output.txt')
-spmf_build = spmf.Spmf("AprioriClose", arguments=[0.3], input_filename=data_path,
+spmf_build = spmf.Spmf("AprioriClose", arguments=[0.1], input_filename=data_path,
                        spmf_bin_location_dir='C:/Users/Theo/PycharmProjects/AADA/TP2')
 
 spmf_build.run()
+print(spmf_build.to_pandas_dataframe(pickle=True))
+spmf_build.to_csv("output.csv")
+
