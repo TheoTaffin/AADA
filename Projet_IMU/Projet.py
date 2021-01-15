@@ -73,9 +73,9 @@ def features_extraction(df, capteur_lst):
     subjects = [i for i in range(1, 9)]
     experiences = [i for i in range(1, 5)]
 
-    for action in actions:
-        for subject in subjects:
-            for experience in experiences:
+    for subject in subjects:
+        for experience in experiences:
+            for action in actions:
                 for capteur in capteur_lst:
                     vector = df.loc[(df['action'] == action) &
                                     (df['subject'] == subject) &
@@ -84,8 +84,9 @@ def features_extraction(df, capteur_lst):
 
                     capteur_features[f"mean_{capteur}"] = float(vector.mean())
                     capteur_features[f"std_{capteur}"] = float(vector.std())
+                    capteur_features["action"] = action
 
-                actions_features[(subject, experience, action)] = capteur_features
+                actions_features[(subject, experience,  action)] = capteur_features
                 capteur_features = {}
 
     feature_df = pd.DataFrame.from_dict(actions_features).dropna(axis=1)
@@ -96,3 +97,31 @@ data = load_data(data_path)
 tracer_signal(data, 1, 1, 1, 3)
 tracer_signal(data, 2, 1, 1, 3)
 features = features_extraction(data, data.columns[0:6])
+
+
+def train_test_split(df, subject_train, subject_test):
+
+    normalized_df = {}
+    features_name = list(df.columns)
+    features_name.remove('action')
+
+    for name, col in df[features_name].loc[subject_train].items():
+        mean = col.mean()
+        std = col.std()
+
+        vector = np.array((df[name] - mean) / std)
+
+        normalized_df[name] = vector
+
+    normalized_df['action'] = df['action']
+    normalized_df = pd.DataFrame.from_dict(normalized_df)
+
+    train_df = normalized_df.loc[subject_train]
+    test_df = normalized_df.loc[subject_test]
+
+    return train_df, test_df
+
+
+train_subject_lst = [1, 3, 5, 7]
+test_subject_lst = [2, 4, 6, 8]
+train, test = train_test_split(features.transpose(), train_subject_lst, test_subject_lst)
