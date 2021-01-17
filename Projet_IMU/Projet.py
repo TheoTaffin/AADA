@@ -3,7 +3,12 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os
 from scipy import io as sio
-
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.neural_network import MLPClassifier
+from sklearn.svm import SVC
+from sklearn.metrics import classification_report
+from sklearn.ensemble import RandomForestClassifier
 
 data_path = 'C:/Users/Theo/PycharmProjects/AADA/Projet_IMU/data'
 
@@ -84,6 +89,7 @@ def features_extraction(df, capteur_lst):
 
                     capteur_features[f"mean_{capteur}"] = float(vector.mean())
                     capteur_features[f"std_{capteur}"] = float(vector.std())
+                    capteur_features[f"median_{capteur}"] = float(vector.median())
                     capteur_features["action"] = action
 
                 actions_features[(subject, experience,  action)] = capteur_features
@@ -91,12 +97,6 @@ def features_extraction(df, capteur_lst):
 
     feature_df = pd.DataFrame.from_dict(actions_features).dropna(axis=1)
     return feature_df
-
-
-data = load_data(data_path)
-tracer_signal(data, 1, 1, 1, 3)
-tracer_signal(data, 2, 1, 1, 3)
-features = features_extraction(data, data.columns[0:6])
 
 
 def train_test_split(df, subject_train, subject_test):
@@ -122,6 +122,50 @@ def train_test_split(df, subject_train, subject_test):
     return train_df, test_df
 
 
+def shuffle(df):
+    return df.sample(frac=1)
+
+
+def train_classifier(classifiers, df_train, df_test):
+
+    scores = {}
+
+    features_name = list(df_train.columns)
+    features_name.remove('action')
+
+    # TODO : use gridsearch instead
+    for clf in classifiers:
+
+        clf_name = str(clf).split('(')[0]
+        clf.fit(df_train[features_name], df_train['action'])
+        pred = clf.predict(df_test[features_name])
+
+        scores[clf_name] = classification_report(df_test['action'], pred)
+        print(clf_name)
+    return scores
+
+
+data = load_data(data_path)
+tracer_signal(data, 1, 1, 1, 3)
+tracer_signal(data, 2, 1, 1, 3)
+
+features = features_extraction(data, data.columns[0:6])
+
 train_subject_lst = [1, 3, 5, 7]
 test_subject_lst = [2, 4, 6, 8]
 train, test = train_test_split(features.transpose(), train_subject_lst, test_subject_lst)
+
+train = shuffle(train)
+test = shuffle(test)
+
+clf_lst = [DecisionTreeClassifier(),
+           KNeighborsClassifier(n_neighbors=5),
+           MLPClassifier(hidden_layer_sizes=(150, ), max_iter=1000,
+                         alpha=1e-4, random_state=1),
+           SVC(),
+           RandomForestClassifier()]
+
+scores = train_classifier(clf_lst, train, test)
+
+for name, score in scores.items():
+    print(name, score)
