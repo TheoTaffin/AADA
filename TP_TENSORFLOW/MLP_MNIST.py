@@ -136,12 +136,13 @@ with tf.Session() as s:
 
 
 plt.ylim(ymin=0, ymax=1)
-plt.plot.grid()
-plt.plot.plot(tab_acc_train, label="Train error")
-plt.plot.plot(tab_acc_test, label="Test error")
-plt.plot.legend(loc="upper right")
-plt.plot.show()
+plt.grid()
+plt.plot(tab_acc_train, label="Train accuracy")
+plt.plot(tab_acc_test, label="Test accuracy")
+plt.legend(loc="upper right")
+plt.show()
 
+# Doesn't work for me, need some adjustment (probably coming from imshow)
 # np.set_printoptions(formatter={'float': '{:0.3f}'.format})
 # for image in range(batch_size):
 #     print("image", image)
