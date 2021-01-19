@@ -1,10 +1,25 @@
 # Convolutional neural network for handwritten digits recognition
+import ctypes
 
+cudart64_100 = ctypes.WinDLL("C:\\Program Files\\NVIDIA GPU Computing "
+                       "Toolkit\\CUDA\\v10.0\\bin\\cudart64_100.dll")
+cublas64_100 = ctypes.WinDLL("C:\\Program Files\\NVIDIA GPU Computing "
+                       "Toolkit\\CUDA\\v10.0\\bin\\cublas64_100.dll")
+cufft64_100 = ctypes.WinDLL("C:\\Program Files\\NVIDIA GPU Computing "
+                             "Toolkit\\CUDA\\v10.0\\bin\\cufft64_100.dll")
+curand64_100 = ctypes.WinDLL("C:\\Program Files\\NVIDIA GPU Computing "
+                             "Toolkit\\CUDA\\v10.0\\bin\\curand64_100.dll")
+cusolver64_100 = ctypes.WinDLL("C:\\Program Files\\NVIDIA GPU Computing "
+                             "Toolkit\\CUDA\\v10.0\\bin\\cusolver64_100.dll")
+cusparse64_100 = ctypes.WinDLL("C:\\Program Files\\NVIDIA GPU Computing "
+                             "Toolkit\\CUDA\\v10.0\\bin\\cusparse64_100.dll")
+cudnn64_7 = ctypes.WinDLL("C:\\Program Files\\NVIDIA GPU Computing "
+                             "Toolkit\\CUDA\\v10.0\\bin\\cudnn64_7.dll")
+# necessary on a local machine bcs of tensorflow version
+########################### IGNORE PREVIOUS PART IF YOU ARE ON COLAB OR DON'T CARE ABOUT GPU USAGE
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
-import cv2
-import os
 from tensorflow.examples.tutorials.mnist import input_data
 
 batch_size = 100
@@ -46,6 +61,21 @@ None is there actually equal to our batch size.
 """
 
 
+def compute_normalization(data_input):
+    # computes the mean and variance of x across axes (here batch, height, width)
+    mean, variance = tf.nn.moments(data_input, axes=[0, 1, 2])
+
+    # we initialize scale and beta to respectively 1 and 0 so they don't influence the
+    # normalization
+    scale = tf.Variable(np.ones(shape=data_input.shape[-1], dtype=np.float32))
+    beta = tf.Variable(np.zeros(shape=data_input.shape[-1], dtype=np.float32))
+
+    # factor to induce variance (noise) to the normalization
+    variance_epsilon = 1e-3
+    normalization = tf.nn.batch_normalization(data_input, mean, variance, scale, beta, variance_epsilon)
+    return normalization
+
+
 def build_conv_layer(data_input, filters=16, kernel=(5, 5), padding='SAME'):
     # conv layer wrapper
     input_channel = int(data_input.shape[3])
@@ -64,7 +94,8 @@ def build_conv_layer(data_input, filters=16, kernel=(5, 5), padding='SAME'):
 
     conv_layer = tf.nn.conv2d(input=data_input, filter=filters_weights_init, padding=padding)
     conv_layer = tf.nn.bias_add(conv_layer, filters_biases_init)
-    activation = tf.nn.relu(conv_layer)
+    conv_layer_norm = compute_normalization(conv_layer)
+    activation = tf.nn.relu(conv_layer_norm)
     return activation
 
 
@@ -76,6 +107,15 @@ def build_maxpool_layer(data_input, strides=[1, 2, 2, 1], kernel=[2, 2],
     return maxpool_layer
 
 
+def build_output_layer(previous_layer, number_of_classes=10):
+    layer_weights_output = tf.Variable(tf.truncated_normal(shape=(previous_layer.shape[1].value,
+                                                                  number_of_classes)),
+                                       dtype=tf.float32)
+    layer_biases_output = tf.Variable(np.ones(10), dtype=tf.float32)
+    layer_values = tf.matmul(previous_layer, layer_weights_output) + layer_biases_output
+    return layer_values
+
+
 conv2d_1 = build_conv_layer(ph_input, filters=16,  kernel=(5, 5))
 conv2d_2 = build_conv_layer(conv2d_1, filters=16,  kernel=(5, 5))
 maxpool2d_1 = build_maxpool_layer(conv2d_2)
@@ -85,18 +125,10 @@ maxpool2d_2 = build_maxpool_layer(conv2d_4)
 # shape = (batch_size, 32, 7, 7)
 flatten_1 = tf.reshape(maxpool2d_2, [maxpool2d_2.shape[0],
                                      maxpool2d_2.shape[1]*maxpool2d_2.shape[2]*maxpool2d_2.shape[3]])
-
-
-shape = []
-layer_weights_output = tf.Variable(tf.truncated_normal(shape=(flatten_1.shape[1].value, 10)),
-                                   dtype=tf.float32)
-layer_biases_output = tf.Variable(np.zeros(10), dtype=tf.float32)
-output_layer_values = tf.matmul(flatten_1, layer_weights_output) + \
-                      layer_biases_output
+output_layer_values = build_output_layer(flatten_1, number_of_classes=10)
 output_layer = tf.nn.softmax(output_layer_values)
 
-# For the training phase, we need to chose a loss function to optimize and an optimization
-# method. Loss function will be cross entropy and the optimizer GradientDescentOptimizer
+# loss, train and accuracy metrics declaration
 loss = tf.nn.softmax_cross_entropy_with_logits_v2(labels=ph_output, logits=output_layer_values)
 train = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(loss)
 accuracy = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(output_layer, 1), tf.argmax(ph_output, 1)),
@@ -138,7 +170,7 @@ with tf.Session() as s:
         # Computation of the mean of the accuracy of the predicted values
         print(f"train accuracy: {np.mean(tab_acc)}")
         """
-        In the original subject, we store 1-mean to represent the error percentage. I just find 
+        In the original subject, we store 1-mean to represent the error percentage. I just find
         accuracy percentage more readable in a graph, so I swapped it
         """
         tab_acc_train.append(np.mean(tab_acc))
