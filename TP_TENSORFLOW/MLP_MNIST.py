@@ -1,3 +1,5 @@
+# Multi-layers Perceptron for handwritten digits recognition
+
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
@@ -7,6 +9,7 @@ from tensorflow.examples.tutorials.mnist import input_data
 
 # Loading mnist image and normalizing the values (pixels grayscaled 0 - 255)
 mnist = input_data.read_data_sets('MNIST_data', one_hot=True)
+
 mnist_train_images = mnist.train.images/255
 mnist_train_labels = mnist.train.labels
 mnist_test_images = mnist.test.images/255
@@ -45,7 +48,7 @@ epochs = 200
 
 ### Disclaimer : I'm not exactly sure yet how to name the following variables. The idea is that
 # they represent a layer of 100 neurons, and allow for the different computation needed to
-# predict a the class of our images
+# predict the class of our images
 
 # weight and biases initialization. We use tf.truncated_normal to initialize the weights with
 # random values following a normal distribution
@@ -142,12 +145,9 @@ plt.plot(tab_acc_test, label="Test accuracy")
 plt.legend(loc="upper right")
 plt.show()
 
-# Doesn't work for me, need some adjustment (probably coming from imshow)
-# np.set_printoptions(formatter={'float': '{:0.3f}'.format})
-# for image in range(batch_size):
-#     print("image", image)
-#     print("network output:", results[image], np.argmax(results[image]))
-#     print("expected output :", mnist_test_labels[image], np.argmax(mnist_test_labels[image]))
-#     cv2.imshow('image', mnist_test_images[image].reshape(28, 28))
-#     if cv2.waitKey()&0xFF == ord('q'):
-#         break
+for image in range(batch_size//10):
+    real_label = np.argmax(mnist_test_labels[image])
+    predicted_label = np.argmax(results[image])
+    plt.imshow(mnist_test_images[image])
+    plt.title(f"real label:{real_label} , predicted label:{predicted_label}")
+    plt.show()
