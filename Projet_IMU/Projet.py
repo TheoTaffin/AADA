@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import os
 from scipy import io as sio
 from sklearn.model_selection import GridSearchCV
-from sklearn.metrics import make_scorer, accuracy_score
+from sklearn.metrics import make_scorer, average_precision_score
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.neural_network import MLPClassifier
@@ -143,12 +143,12 @@ def train_classifier(classifiers, df_train, df_test):
     for clf, parameters in classifiers:
 
         clf_name = str(clf).split('(')[0]
-        grid_search = GridSearchCV(clf, parameters, scoring=make_scorer(accuracy_score))
+        grid_search = GridSearchCV(clf, parameters, scoring='precision_macro')
         grid_search.fit(df_train[features_name], df_train['action'])
         pred = grid_search.predict(df_test[features_name])
 
         scores[clf_name] = classification_report(df_test['action'], pred)
-        print(clf_name, grid_search.best_estimator_, grid_search.best_params_, grid_search.best_score_)
+        print(grid_search.best_estimator_, grid_search.best_params_, grid_search.best_score_)
     return scores
 
 
@@ -168,13 +168,12 @@ test = shuffle(test)
 clf_lst = [(DecisionTreeClassifier(), {'criterion': ['gini', 'entropy']}),
            (KNeighborsClassifier(), {'weights': ['uniform', 'distance'],
                                      'n_neighbors': [1, 3, 5, 7, 9, 11, 13, 15]}),
-           (MLPClassifier(), {'hidden_layer_sizes': [20, 60, 100, 140, 180, 200],
+           (MLPClassifier(), {'hidden_layer_sizes': [160, 180, 200],
                               'max_iter':[1000],
-                              'alpha': [1e-3, 8e-4, 6e-4, 4e-4, 2e-4, 1e-4],
+                              'alpha': [1e-3, 8e-4, 6e-4],
                               'activation': ['logistic', 'relu'],
-                              'solver': ['sgd', 'adam']}),
-           (SVC(), {'C': [2, 1, 0.5], 'kernel': ['linear', 'rbf', 'sigmoid']}),
-           RandomForestClassifier()]
+                              'solver': ['adam']}),
+           (SVC(), {'C': [2, 1, 0.5], 'kernel': ['linear', 'rbf', 'sigmoid']})]
 
 scores = train_classifier(clf_lst, train, test)
 
