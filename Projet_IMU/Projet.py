@@ -3,6 +3,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os
 from scipy import io as sio
+from sklearn.model_selection import GridSearchCV
+from sklearn.metrics import make_scorer, accuracy_score
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.neural_network import MLPClassifier
@@ -90,6 +92,11 @@ def features_extraction(df, capteur_lst):
                     capteur_features[f"mean_{capteur}"] = float(vector.mean())
                     capteur_features[f"std_{capteur}"] = float(vector.std())
                     capteur_features[f"median_{capteur}"] = float(vector.median())
+                    capteur_features[f"mad_{capteur}"] = float(vector.mad())
+                    capteur_features[f"first_quant_{capteur}"] = float(vector.quantile(q=0.25))
+                    capteur_features[f"third_quant_{capteur}"] = float(vector.quantile(q=0.75))
+                    capteur_features[f"min_{capteur}"] = float(vector.min())
+                    capteur_features[f"max_{capteur}"] = float(vector.max())
                     capteur_features["action"] = action
 
                 actions_features[(subject, experience,  action)] = capteur_features
@@ -133,15 +140,15 @@ def train_classifier(classifiers, df_train, df_test):
     features_name = list(df_train.columns)
     features_name.remove('action')
 
-    # TODO : use gridsearch instead
-    for clf in classifiers:
+    for clf, parameters in classifiers:
 
         clf_name = str(clf).split('(')[0]
-        clf.fit(df_train[features_name], df_train['action'])
-        pred = clf.predict(df_test[features_name])
+        grid_search = GridSearchCV(clf, parameters, scoring=make_scorer(accuracy_score))
+        grid_search.fit(df_train[features_name], df_train['action'])
+        pred = grid_search.predict(df_test[features_name])
 
         scores[clf_name] = classification_report(df_test['action'], pred)
-        print(clf_name)
+        print(clf_name, grid_search.best_estimator_, grid_search.best_params_, grid_search.best_score_)
     return scores
 
 
@@ -158,11 +165,15 @@ train, test = train_test_split(features.transpose(), train_subject_lst, test_sub
 train = shuffle(train)
 test = shuffle(test)
 
-clf_lst = [DecisionTreeClassifier(),
-           KNeighborsClassifier(n_neighbors=5),
-           MLPClassifier(hidden_layer_sizes=(150, ), max_iter=1000,
-                         alpha=1e-4, random_state=1),
-           SVC(),
+clf_lst = [(DecisionTreeClassifier(), {'criterion': ['gini', 'entropy']}),
+           (KNeighborsClassifier(), {'weights': ['uniform', 'distance'],
+                                     'n_neighbors': [1, 3, 5, 7, 9, 11, 13, 15]}),
+           (MLPClassifier(), {'hidden_layer_sizes': [20, 60, 100, 140, 180, 200],
+                              'max_iter':[1000],
+                              'alpha': [1e-3, 8e-4, 6e-4, 4e-4, 2e-4, 1e-4],
+                              'activation': ['logistic', 'relu'],
+                              'solver': ['sgd', 'adam']}),
+           (SVC(), {'C': [2, 1, 0.5], 'kernel': ['linear', 'rbf', 'sigmoid']}),
            RandomForestClassifier()]
 
 scores = train_classifier(clf_lst, train, test)
